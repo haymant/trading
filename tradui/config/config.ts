@@ -92,6 +92,12 @@ export default defineConfig({
           path: '/dashboard/workplace',
           component: './dashboard/workplace',
         },
+        {
+          name: 'Market',
+          icon: 'smile',
+          path: '/dashboard/market',
+          component: './dashboard/market',
+        },
       ],
     },
     {

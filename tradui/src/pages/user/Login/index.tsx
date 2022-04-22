@@ -1,9 +1,6 @@
 import {
-  AlipayCircleOutlined,
   LockOutlined,
-  TaobaoCircleOutlined,
   UserOutlined,
-  WeiboCircleOutlined,
 } from '@ant-design/icons';
 import { Alert, message } from 'antd';
 import React, { useState } from 'react';

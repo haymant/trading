@@ -2,12 +2,14 @@
 /* eslint-disable */
 import { request } from 'umi';
 
+
 /** 获取当前的用户 GET /api/currentUser */
 export async function currentUser(options?: { [key: string]: any }) {
   return request<{
     data: API.CurrentUser;
   }>('/api/currentUser', {
     method: 'GET',
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -16,18 +18,18 @@ export async function currentUser(options?: { [key: string]: any }) {
 export async function outLogin(options?: { [key: string]: any }) {
   return request<Record<string, any>>('/api/login/outLogin', {
     method: 'POST',
+    credentials: 'include',
     ...(options || {}),
   });
 }
 
 /** 登录接口 POST /api/login/account */
-export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
+export async function login(body: API.LoginParams, options?: { [key: string]: any }) {  
   return request<API.LoginResult>('/api/login/account', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    requestType: 'form',
     data: body,
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -36,6 +38,7 @@ export async function login(body: API.LoginParams, options?: { [key: string]: an
 export async function getNotices(options?: { [key: string]: any }) {
   return request<API.NoticeIconList>('/api/notices', {
     method: 'GET',
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -56,6 +59,7 @@ export async function rule(
     params: {
       ...params,
     },
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -64,6 +68,7 @@ export async function rule(
 export async function updateRule(options?: { [key: string]: any }) {
   return request<API.RuleListItem>('/api/rule', {
     method: 'PUT',
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -72,6 +77,7 @@ export async function updateRule(options?: { [key: string]: any }) {
 export async function addRule(options?: { [key: string]: any }) {
   return request<API.RuleListItem>('/api/rule', {
     method: 'POST',
+    credentials: 'include',
     ...(options || {}),
   });
 }
@@ -80,6 +86,7 @@ export async function addRule(options?: { [key: string]: any }) {
 export async function removeRule(options?: { [key: string]: any }) {
   return request<Record<string, any>>('/api/rule', {
     method: 'DELETE',
+    credentials: 'include',
     ...(options || {}),
   });
 }
