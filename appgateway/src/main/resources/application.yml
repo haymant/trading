@@ -1,0 +1,37 @@
+app:
+  client:
+    host: localhost
+    port: 8500
+  server:
+    redis_host: 192.168.1.100
+    redis_port: 6379
+    db_host: 192.168.1.100
+    db_port: 5432
+
+# Server property
+server:
+  port: 8501
+  #server:
+  #  ssl:
+    # enabled=true
+    # key-alias=selfsigned_localhost_sslserver
+    # key-password=changeit
+    # key-store=classpath:ssl-server.jks
+    # key-store-provider=SUN
+    #  key-store-type=JKS
+
+# Data source
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://${app.server.db_host}:${app.server.db_port}/trading
+    username: trading
+    password: trading
+  session:
+## session management
+    store-type: redis
+  redis:
+    host: ${app.server.redis_host}
+    port: ${app.server.redis_port}

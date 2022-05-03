@@ -1,242 +1,320 @@
-import type { FC } from 'react';
-import { Avatar, Card, Col, List, Skeleton, Row, Statistic } from 'antd';
-import { Radar } from '@ant-design/charts';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, message, Input, Drawer } from 'antd';
+import React, { useState, useRef } from 'react';
+import { PageContainer, FooterToolbar } from '@ant-design/pro-layout';
+import type { ProColumns, ActionType } from '@ant-design/pro-table';
+import ProTable from '@ant-design/pro-table';
+import { ModalForm, ProFormText, ProFormTextArea } from '@ant-design/pro-form';
+import type { ProDescriptionsItemProps } from '@ant-design/pro-descriptions';
+import ProDescriptions from '@ant-design/pro-descriptions';
+import type { FormValueType } from './components/UpdateForm';
+import UpdateForm from './components/UpdateForm';
+import { rule, addRule, updateRule, removeRule } from './service';
+import type { TableListItem, TableListPagination } from './data';
+/**
+ * 添加节点
+ *
+ * @param fields
+ */
 
-import { Link, useRequest } from 'umi';
-import { PageContainer } from '@ant-design/pro-layout';
-import moment from 'moment';
-import EditableLinkGroup from './components/EditableLinkGroup';
-import styles from './style.less';
-import type { ActivitiesType, CurrentUser } from './data.d';
-import { queryProjectNotice, queryActivities, fakeChartData } from './service';
+const handleAdd = async (fields: TableListItem) => {
+  const hide = message.loading('正在添加');
 
-const links = [
-  {
-    title: '操作一',
-    href: '',
-  },
-  {
-    title: '操作二',
-    href: '',
-  },
-  {
-    title: '操作三',
-    href: '',
-  },
-  {
-    title: '操作四',
-    href: '',
-  },
-  {
-    title: '操作五',
-    href: '',
-  },
-  {
-    title: '操作六',
-    href: '',
-  },
-];
-
-const PageHeaderContent: FC<{ currentUser: Partial<CurrentUser> }> = ({ currentUser }) => {
-  const loading = currentUser && Object.keys(currentUser).length;
-  if (!loading) {
-    return <Skeleton avatar paragraph={{ rows: 1 }} active />;
+  try {
+    await addRule({ ...fields });
+    hide();
+    message.success('添加成功');
+    return true;
+  } catch (error) {
+    hide();
+    message.error('添加失败请重试！');
+    return false;
   }
-  return (
-    <div className={styles.pageHeaderContent}>
-      <div className={styles.avatar}>
-        <Avatar size="large" src={currentUser.avatar} />
-      </div>
-      <div className={styles.content}>
-        <div className={styles.contentTitle}>
-          早安，
-          {currentUser.name}
-          ，祝你开心每一天！
-        </div>
-        <div>
-          {currentUser.title} |{currentUser.group}
-        </div>
-      </div>
-    </div>
-  );
+};
+/**
+ * 更新节点
+ *
+ * @param fields
+ */
+
+const handleUpdate = async (fields: FormValueType, currentRow?: TableListItem) => {
+  const hide = message.loading('正在配置');
+
+  try {
+    await updateRule({
+      ...currentRow,
+      ...fields,
+    });
+    hide();
+    message.success('配置成功');
+    return true;
+  } catch (error) {
+    hide();
+    message.error('配置失败请重试！');
+    return false;
+  }
+};
+/**
+ * 删除节点
+ *
+ * @param selectedRows
+ */
+
+const handleRemove = async (selectedRows: TableListItem[]) => {
+  const hide = message.loading('正在删除');
+  if (!selectedRows) return true;
+
+  try {
+    await removeRule({
+      key: selectedRows.map((row) => row.key),
+    });
+    hide();
+    message.success('删除成功，即将刷新');
+    return true;
+  } catch (error) {
+    hide();
+    message.error('删除失败，请重试');
+    return false;
+  }
 };
 
-const ExtraContent: FC<Record<string, any>> = () => (
-  <div className={styles.extraContent}>
-    <div className={styles.statItem}>
-      <Statistic title="项目数" value={56} />
-    </div>
-    <div className={styles.statItem}>
-      <Statistic title="团队内排名" value={8} suffix="/ 24" />
-    </div>
-    <div className={styles.statItem}>
-      <Statistic title="项目访问" value={2223} />
-    </div>
-  </div>
-);
+const TableList: React.FC = () => {
+  /** 新建窗口的弹窗 */
+  const [createModalVisible, handleModalVisible] = useState<boolean>(false);
+  /** 分布更新窗口的弹窗 */
 
-const Workplace: FC = () => {
-  const { loading: projectLoading, data: projectNotice = [] } = useRequest(queryProjectNotice);
-  const { loading: activitiesLoading, data: activities = [] } = useRequest(queryActivities);
-  const { data } = useRequest(fakeChartData);
+  const [updateModalVisible, handleUpdateModalVisible] = useState<boolean>(false);
+  const [showDetail, setShowDetail] = useState<boolean>(false);
+  const actionRef = useRef<ActionType>();
+  const [currentRow, setCurrentRow] = useState<TableListItem>();
+  const [selectedRowsState, setSelectedRows] = useState<TableListItem[]>([]);
+  /** 国际化配置 */
 
-  const renderActivities = (item: ActivitiesType) => {
-    const events = item.template.split(/@\{([^{}]*)\}/gi).map((key) => {
-      if (item[key]) {
+  const columns: ProColumns<TableListItem>[] = [
+    {
+      title: '规则名称',
+      dataIndex: 'name',
+      tip: '规则名称是唯一的 key',
+      render: (dom, entity) => {
         return (
-          <a href={item[key].link} key={item[key].name}>
-            {item[key].name}
+          <a
+            onClick={() => {
+              setCurrentRow(entity);
+              setShowDetail(true);
+            }}
+          >
+            {dom}
           </a>
         );
-      }
-      return key;
-    });
-    return (
-      <List.Item key={item.id}>
-        <List.Item.Meta
-          avatar={<Avatar src={item.user.avatar} />}
-          title={
-            <span>
-              <a className={styles.username}>{item.user.name}</a>
-              &nbsp;
-              <span className={styles.event}>{events}</span>
-            </span>
-          }
-          description={
-            <span className={styles.datetime} title={item.updatedAt}>
-              {moment(item.updatedAt).fromNow()}
-            </span>
-          }
-        />
-      </List.Item>
-    );
-  };
+      },
+    },
+    {
+      title: '描述',
+      dataIndex: 'desc',
+      valueType: 'textarea',
+    },
+    {
+      title: '服务调用次数',
+      dataIndex: 'callNo',
+      sorter: true,
+      hideInForm: true,
+      renderText: (val: string) => `${val}万`,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      hideInForm: true,
+      valueEnum: {
+        0: {
+          text: '关闭',
+          status: 'Default',
+        },
+        1: {
+          text: '运行中',
+          status: 'Processing',
+        },
+        2: {
+          text: '已上线',
+          status: 'Success',
+        },
+        3: {
+          text: '异常',
+          status: 'Error',
+        },
+      },
+    },
+    {
+      title: '上次调度时间',
+      sorter: true,
+      dataIndex: 'updatedAt',
+      valueType: 'dateTime',
+      renderFormItem: (item, { defaultRender, ...rest }, form) => {
+        const status = form.getFieldValue('status');
+
+        if (`${status}` === '0') {
+          return false;
+        }
+
+        if (`${status}` === '3') {
+          return <Input {...rest} placeholder="请输入异常原因！" />;
+        }
+
+        return defaultRender(item);
+      },
+    },
+    {
+      title: '操作',
+      dataIndex: 'option',
+      valueType: 'option',
+      render: (_, record) => [
+        <a
+          key="config"
+          onClick={() => {
+            handleUpdateModalVisible(true);
+            setCurrentRow(record);
+          }}
+        >
+          配置
+        </a>,
+        <a key="subscribeAlert" href="https://procomponents.ant.design/">
+          订阅警报
+        </a>,
+      ],
+    },
+  ];
 
   return (
-    <PageContainer
-      content={
-        <PageHeaderContent
-          currentUser={{
-            avatar: 'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png',
-            name: '吴彦祖',
-            userid: '00000001',
-            email: 'antdesign@alipay.com',
-            signature: '海纳百川，有容乃大',
-            title: '交互专家',
-            group: '蚂蚁金服－某某某事业群－某某平台部－某某技术部－UED',
-          }}
+    <PageContainer>
+      <ProTable<TableListItem, TableListPagination>
+        headerTitle="查询表格"
+        actionRef={actionRef}
+        rowKey="key"
+        search={{
+          labelWidth: 120,
+        }}
+        toolBarRender={() => [
+          <Button
+            type="primary"
+            key="primary"
+            onClick={() => {
+              handleModalVisible(true);
+            }}
+          >
+            <PlusOutlined /> 新建
+          </Button>,
+        ]}
+        request={rule}
+        columns={columns}
+        rowSelection={{
+          onChange: (_, selectedRows) => {
+            setSelectedRows(selectedRows);
+          },
+        }}
+      />
+      {selectedRowsState?.length > 0 && (
+        <FooterToolbar
+          extra={
+            <div>
+              已选择{' '}
+              <a
+                style={{
+                  fontWeight: 600,
+                }}
+              >
+                {selectedRowsState.length}
+              </a>{' '}
+              项 &nbsp;&nbsp;
+              <span>
+                服务调用次数总计 {selectedRowsState.reduce((pre, item) => pre + item.callNo!, 0)} 万
+              </span>
+            </div>
+          }
+        >
+          <Button
+            onClick={async () => {
+              await handleRemove(selectedRowsState);
+              setSelectedRows([]);
+              actionRef.current?.reloadAndRest?.();
+            }}
+          >
+            批量删除
+          </Button>
+          <Button type="primary">批量审批</Button>
+        </FooterToolbar>
+      )}
+      <ModalForm
+        title="新建规则"
+        width="400px"
+        visible={createModalVisible}
+        onVisibleChange={handleModalVisible}
+        onFinish={async (value) => {
+          const success = await handleAdd(value as TableListItem);
+          if (success) {
+            handleModalVisible(false);
+            if (actionRef.current) {
+              actionRef.current.reload();
+            }
+          }
+        }}
+      >
+        <ProFormText
+          rules={[
+            {
+              required: true,
+              message: '规则名称为必填项',
+            },
+          ]}
+          width="md"
+          name="name"
         />
-      }
-      extraContent={<ExtraContent />}
-    >
-      <Row gutter={24}>
-        <Col xl={16} lg={24} md={24} sm={24} xs={24}>
-          <Card
-            className={styles.projectList}
-            style={{ marginBottom: 24 }}
-            title="进行中的项目"
-            bordered={false}
-            extra={<Link to="/">全部项目</Link>}
-            loading={projectLoading}
-            bodyStyle={{ padding: 0 }}
-          >
-            {projectNotice.map((item) => (
-              <Card.Grid className={styles.projectGrid} key={item.id}>
-                <Card bodyStyle={{ padding: 0 }} bordered={false}>
-                  <Card.Meta
-                    title={
-                      <div className={styles.cardTitle}>
-                        <Avatar size="small" src={item.logo} />
-                        <Link to={item.href}>{item.title}</Link>
-                      </div>
-                    }
-                    description={item.description}
-                  />
-                  <div className={styles.projectItemContent}>
-                    <Link to={item.memberLink}>{item.member || ''}</Link>
-                    {item.updatedAt && (
-                      <span className={styles.datetime} title={item.updatedAt}>
-                        {moment(item.updatedAt).fromNow()}
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              </Card.Grid>
-            ))}
-          </Card>
-          <Card
-            bodyStyle={{ padding: 0 }}
-            bordered={false}
-            className={styles.activeCard}
-            title="动态"
-            loading={activitiesLoading}
-          >
-            <List<ActivitiesType>
-              loading={activitiesLoading}
-              renderItem={(item) => renderActivities(item)}
-              dataSource={activities}
-              className={styles.activitiesList}
-              size="large"
-            />
-          </Card>
-        </Col>
-        <Col xl={8} lg={24} md={24} sm={24} xs={24}>
-          <Card
-            style={{ marginBottom: 24 }}
-            title="快速开始 / 便捷导航"
-            bordered={false}
-            bodyStyle={{ padding: 0 }}
-          >
-            <EditableLinkGroup onAdd={() => {}} links={links} linkElement={Link} />
-          </Card>
-          <Card
-            style={{ marginBottom: 24 }}
-            bordered={false}
-            title="XX 指数"
-            loading={data?.radarData?.length === 0}
-          >
-            <div className={styles.chart}>
-              <Radar
-                height={343}
-                data={data?.radarData || []}
-                angleField="label"
-                seriesField="name"
-                radiusField="value"
-                area={{
-                  visible: false,
-                }}
-                point={{
-                  visible: true,
-                }}
-                legend={{
-                  position: 'bottom-center',
-                }}
-              />
-            </div>
-          </Card>
-          <Card
-            bodyStyle={{ paddingTop: 12, paddingBottom: 12 }}
-            bordered={false}
-            title="团队"
-            loading={projectLoading}
-          >
-            <div className={styles.members}>
-              <Row gutter={48}>
-                {projectNotice.map((item) => (
-                  <Col span={12} key={`members-item-${item.id}`}>
-                    <Link to={item.href}>
-                      <Avatar src={item.logo} size="small" />
-                      <span className={styles.member}>{item.member}</span>
-                    </Link>
-                  </Col>
-                ))}
-              </Row>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+        <ProFormTextArea width="md" name="desc" />
+      </ModalForm>
+      <UpdateForm
+        onSubmit={async (value) => {
+          const success = await handleUpdate(value, currentRow);
+
+          if (success) {
+            handleUpdateModalVisible(false);
+            setCurrentRow(undefined);
+
+            if (actionRef.current) {
+              actionRef.current.reload();
+            }
+          }
+        }}
+        onCancel={() => {
+          handleUpdateModalVisible(false);
+          setCurrentRow(undefined);
+        }}
+        updateModalVisible={updateModalVisible}
+        values={currentRow || {}}
+      />
+
+      <Drawer
+        width={600}
+        visible={showDetail}
+        onClose={() => {
+          setCurrentRow(undefined);
+          setShowDetail(false);
+        }}
+        closable={false}
+      >
+        {currentRow?.name && (
+          <ProDescriptions<TableListItem>
+            column={2}
+            title={currentRow?.name}
+            request={async () => ({
+              data: currentRow || {},
+            })}
+            params={{
+              id: currentRow?.name,
+            }}
+            columns={columns as ProDescriptionsItemProps<TableListItem>[]}
+          />
+        )}
+      </Drawer>
     </PageContainer>
   );
 };
 
-export default Workplace;
+export default TableList;

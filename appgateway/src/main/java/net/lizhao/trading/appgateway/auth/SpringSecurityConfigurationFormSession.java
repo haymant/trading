@@ -1,6 +1,8 @@
 package net.lizhao.trading.appgateway.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.lizhao.trading.appgateway.config.AppConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,6 +24,9 @@ import java.util.Map;
 @Configuration
 @EnableWebSecurity
 public class SpringSecurityConfigurationFormSession extends WebSecurityConfigurerAdapter{
+
+    @Autowired
+    private AppConfig conf;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -63,7 +68,7 @@ public class SpringSecurityConfigurationFormSession extends WebSecurityConfigure
     CorsConfigurationSource corsConfigurationSource()
     {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8500"));
+        configuration.setAllowedOrigins(Arrays.asList("http://" + conf.getHost() + ":" + conf.getPort()));
         configuration.setAllowedMethods(Arrays.asList("GET","POST","OPTIONS"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
